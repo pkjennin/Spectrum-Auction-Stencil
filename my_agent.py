@@ -20,10 +20,25 @@ class MyAgent(MyLSVMAgent):
     
     def national_bidder_strategy(self): 
         # TODO: Fill out with your national bidder strategy
+        # Strategy: Target the 6 highest-valued goods and bid just above min_bid + epsilon if valuation > min_bid
         min_bids = self.get_min_bids()
         valuations = self.get_valuations() 
         bids = {} 
-        ...
+        top_goods = sorted(valuations.keys(), key=lambda g: valuations[g], reverse=True)
+        targets = top_goods[:6]
+        current_bundle = self.get_tentative_allocation()
+        current_bundle_val = [valuations[g] for g in current_bundle]
+        total_val = sum(current_bundle_val)
+        mean_val = total_val / len(current_bundle) if len(current_bundle) > 0 else 0
+
+        for g in targets:
+            val = valuations[g]
+            min_bid = min_bids[g]
+            bon = 0.3 * mean_val
+            
+            if bon + val > min_bid:
+                bids[g] = max(min_bid + 0.6 * (bon + val - min_bid), min_bid)
+        bids = self.clip_bids(bids)
         return bids
 
     def regional_bidder_strategy(self): 
