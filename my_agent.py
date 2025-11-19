@@ -50,7 +50,7 @@ class MyAgent(MyLSVMAgent):
         valuations = self.get_valuations(all_pref_goods)
         bids = {}
         for good in all_pref_goods:
-            if(self.get_valuation(good) <= min_bids[good]):
+            if(self.get_valuation(good) >= min_bids[good]):
                 bids[good] = min_bids[good]
         
             
