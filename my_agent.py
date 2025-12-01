@@ -10,13 +10,16 @@ import gzip
 import json
 from path_utils import path_from_local_root
 
+from itertools import combinations
 
-NAME = "patrick" # TODO: Please give your agent a NAME
+
+NAME = "256-82-5206" # TODO: Please give your agent a NAME
 
 class MyAgent(MyLSVMAgent):
     def setup(self):
         #TODO: Fill out with anything you want to initialize each auction
-        pass 
+        self.pref_goods = self.get_goods_in_proximity()
+         
     
     def national_bidder_strategy(self): 
         # TODO: Fill out with your national bidder strategy
@@ -31,33 +34,73 @@ class MyAgent(MyLSVMAgent):
         total_val = sum(current_bundle_val)
         mean_val = total_val / len(current_bundle) if len(current_bundle) > 0 else 0
 
-        for g in targets:
-            val = valuations[g]
-            min_bid = min_bids[g]
-            bon = 0.3 * mean_val
+        # for g in targets:
+        #     val = valuations[g]
+        #     min_bid = min_bids[g]
+        #     bon = 0.3 * mean_val
             
-            if bon + val > min_bid:
-                bids[g] = max(min_bid + 0.6 * (bon + val - min_bid), min_bid)
-        bids = self.clip_bids(bids)
-        return bids
+        #     if bon + val > min_bid:
+        #         bids[g] = max(min_bid + 0.6 * (bon + val - min_bid), min_bid)
+        # bids = self.clip_bids(bids)
+        # return bids
+
+        for good in top_goods:
+            if(self.get_valuation(good) >= min_bids[good]):
+                bids[good] = min_bids[good]
+        return self.clip_bids(bids)
 
     def regional_bidder_strategy(self): 
         # TODO: Fill out with your regional bidder strategy
         # Strategy: bid on preferred good and then on the next 6 highest utility adjacent goods
-        all_pref_goods = self.get_goods_in_proximity()
-        min_bids = self.get_min_bids(all_pref_goods)
+        min_bids = self.get_min_bids(self.pref_goods)
 
-        valuations = self.get_valuations(all_pref_goods)
+        valuations = self.get_valuations(self.pref_goods)
         bids = {}
-        for good in all_pref_goods:
-            if(self.get_valuation(good) >= min_bids[good]):
-                bids[good] = min_bids[good]
+        sketchy_goods = []
+        for good in self.pref_goods:
+            if(self.get_valuation(good) < min_bids[good]): # always bid when val >= min bid
+                sketchy_goods.append(good)
+
+        sketchy_vals = self.get_valuations(sketchy_goods)
+        top_sketchy_goods = sorted(sketchy_vals.keys(), key=lambda g: sketchy_vals[g], reverse=True)
+        if(len(top_sketchy_goods) > 4):
+            self.pref_goods = [e for e in self.pref_goods if e not in top_sketchy_goods[4:]]
+            top_sketchy_goods = top_sketchy_goods[:4] # take only top 4
+        combinations_of_sketchy = []
+        for r in range(len(top_sketchy_goods)):
+            combinations_of_sketchy.extend(list(combinations(top_sketchy_goods, r)))
+
+        bundle_vals = {}
+        for bundle in combinations_of_sketchy:
+            new_goods = [e for e in self.pref_goods if e not in bundle]
+            bundle_vals[bundle] = self.calc_total_utility(new_goods)
+        if(bundle_vals):
+            best_bundle = max(bundle_vals, key=bundle_vals.get)
+            #print(best_bundle)
+        else:
+            best_bundle = []
         
-            
-        
+        self.pref_goods = [e for e in self.pref_goods if e not in best_bundle]
+
+        for good in self.pref_goods:
+            bids[good] = min_bids[good]
+
+        # print(self.get_goods_in_proximity())
+        # print(self.pref_goods)
+        # print("----------------------------------------------")
         #pref_good = self.get_regional_good()
         #self.proximity()
         #self.get_goods_to_index()
+
+
+
+            # else:     
+            #     print("AAAAAAAAAAAAAAAA")                                      # => someone else wants good
+            #     new_goods = self.pref_goods.copy().remove(good)
+            #     if(self.calc_total_utility(self.pref_goods) >= self.calc_total_utility(new_goods)):
+            #         bids[good] = min_bids[good]
+            #     else:
+            #         self.pref_goods.remove(good)
         return self.clip_bids(bids)
 
     def get_bids(self):
@@ -72,7 +115,9 @@ class MyAgent(MyLSVMAgent):
 
     def teardown(self):
         #TODO: Fill out with anything you want to run at the end of each auction
-        pass 
+        print(self.get_goods_in_proximity())
+        print(self.pref_goods)
+        print("----------------------------------------------")
 
 ################### SUBMISSION #####################
 my_agent_submission = MyAgent(NAME)
