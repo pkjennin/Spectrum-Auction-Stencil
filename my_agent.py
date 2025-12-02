@@ -19,34 +19,48 @@ class MyAgent(MyLSVMAgent):
     def setup(self):
         #TODO: Fill out with anything you want to initialize each auction
         self.pref_goods = self.get_goods_in_proximity()
-         
+        all_goods = self.get_goods()
+
+        self.highest_seen_bid = {g: 0 for g in all_goods}
+        self.competition = {g: 0 for g in all_goods}
     
     def national_bidder_strategy(self): 
         # TODO: Fill out with your national bidder strategy
-        # Strategy: Target the 6 highest-valued goods and bid just above min_bid + epsilon if valuation > min_bid
+        vals = self.get_valuations()
         min_bids = self.get_min_bids()
-        valuations = self.get_valuations() 
-        bids = {} 
-        top_goods = sorted(valuations.keys(), key=lambda g: valuations[g], reverse=True)
-        targets = top_goods[:6]
-        current_bundle = self.get_tentative_allocation()
-        current_bundle_val = [valuations[g] for g in current_bundle]
-        total_val = sum(current_bundle_val)
-        mean_val = total_val / len(current_bundle) if len(current_bundle) > 0 else 0
+        bids = {}
+        bundle = [g for g in vals if vals[g] >= min_bids[g]]
+        improved = True
+        while improved:
+            improved = False
+            current_util = self.calc_total_utility(bundle)
 
-        # for g in targets:
-        #     val = valuations[g]
-        #     min_bid = min_bids[g]
-        #     bon = 0.3 * mean_val
-            
-        #     if bon + val > min_bid:
-        #         bids[g] = max(min_bid + 0.6 * (bon + val - min_bid), min_bid)
-        # bids = self.clip_bids(bids)
-        # return bids
+            for g in list(bundle):
+                new_bundle = [x for x in bundle if x != g]
+                new_util = self.calc_total_utility(new_bundle)
 
-        for good in top_goods:
-            if(self.get_valuation(good) >= min_bids[good]):
-                bids[good] = min_bids[good]
+                if new_util > current_util:
+                    bundle.remove(g)
+                    improved = True
+                    current_util = new_util
+        all_goods = self.get_goods()
+        current_util = self.calc_total_utility(bundle)
+
+        for g in all_goods:
+            if g not in bundle:
+                if min_bids[g] > vals[g]:
+                    continue
+
+                new_bundle = bundle + [g]
+                new_util = self.calc_total_utility(new_bundle)
+
+                if new_util > current_util:
+                    bundle.append(g)
+                    current_util = new_util
+        for g in bundle:
+            if min_bids[g] <= vals[g]:
+                bids[g] = min_bids[g]
+
         return self.clip_bids(bids)
 
     def regional_bidder_strategy(self): 
@@ -82,8 +96,52 @@ class MyAgent(MyLSVMAgent):
         
         self.pref_goods = [e for e in self.pref_goods if e not in best_bundle]
 
+        # NEW PART: try adding goods in proximity that increase utility
+        # full_proximity = self.get_goods_in_proximity()
+        # current_utility = self.calc_total_utility(self.pref_goods)
+
+        # for good in full_proximity:
+        #     if good not in self.pref_goods:
+        #         new_bundle = self.pref_goods + [good]
+        #         new_utility = self.calc_total_utility(new_bundle)
+        #         if new_utility > current_utility:
+        #             self.pref_goods.append(good)
+        #             current_utility = new_utility
+
+        # for good in self.pref_goods:
+        #     bids[good] = min_bids.get(good, 0)
+        goods_to_idx = self.get_goods_to_index()
+        full_proximity = self.get_goods_in_proximity()
+        all_min_bids = self.get_min_bids()
+
+        current_utility = self.calc_total_utility(self.pref_goods)
+        def are_adjacent(g1, g2):
+            (x1, y1) = goods_to_idx[g1]
+            (x2, y2) = goods_to_idx[g2]
+            return abs(x1 - x2) + abs(y1 - y2) == 1
+        def is_connected_to_some_cluster(bundle, g):
+            for h in bundle:
+                if are_adjacent(g, h):
+                    return True
+            return False
+        for g in full_proximity:
+            if g not in self.pref_goods:
+                if not is_connected_to_some_cluster(self.pref_goods, g):
+                    continue
+
+                new_bundle = self.pref_goods + [g]
+                new_utility = self.calc_total_utility(new_bundle)
+
+                if new_utility > current_utility:
+                    self.pref_goods.append(g)
+                    current_utility = new_utility
+
         for good in self.pref_goods:
-            bids[good] = min_bids[good]
+            bids[good] = all_min_bids[good]
+
+
+        # for good in self.pref_goods:
+        #     bids[good] = min_bids[good]
 
         # print(self.get_goods_in_proximity())
         # print(self.pref_goods)
@@ -111,7 +169,16 @@ class MyAgent(MyLSVMAgent):
     
     def update(self):
         #TODO: Fill out with anything you want to update each round
-        pass 
+        min_bids = self.get_min_bids()
+
+        for g, price in min_bids.items():
+            if g not in self.highest_seen_bid:
+                self.highest_seen_bid[g] = price
+            else:
+                if price > self.highest_seen_bid[g]:
+                    self.highest_seen_bid[g] = price
+                    self.competition[g] += 1
+        # pass 
 
     def teardown(self):
         #TODO: Fill out with anything you want to run at the end of each auction
