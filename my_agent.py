@@ -329,26 +329,46 @@ class MyAgent(MyLSVMAgent):
 
 
 
-# MARGINAL VALUES STRATEGY
-        bids = {}
-        min_bids = self.get_min_bids()
+# # MARGINAL VALUES STRATEGY
+#         bids = {}
+#         min_bids = self.get_min_bids()
 
-        total_utility = self.calc_total_utility(self.pref_goods)
-        for good in self.pref_goods:
-            # new_goods = self.pref_goods.copy().remove(good)
-            new_goods = [g for g in self.pref_goods if g != good]
-            marginal_utility = total_utility - self.calc_total_utility(new_goods)
-            # print(marginal_utility)
-            # print(self.get_valuation(good))
-            # print("----------------------------------")
-            self.good_valuations[good] = max(marginal_utility, self.get_valuation(good))
+#         total_utility = self.calc_total_utility(self.pref_goods)
+#         round_num = self.get_current_round()
+#         adjacent_goods = set(self.get_goods_in_proximity())
+#         # print("Adjacent Goods:", adjacent_goods)
+#         for good in self.pref_goods:
+#             # new_goods = self.pref_goods.copy().remove(good)
+#             new_goods = [g for g in self.pref_goods if g != good]
+#             marginal_utility = total_utility - self.calc_total_utility(new_goods)
+#             # print(marginal_utility)
+#             # print(self.get_valuation(good))
+#             # print("----------------------------------")
+#             self.good_valuations[good] = max(marginal_utility, self.get_valuation(good))
+            
+#             # --- cold rule ---
+#             is_cold = False
+#             # A
+#             winner_hist = self.get_winner_history_map() or []
+#             if round_num > 5:
+#                 recent_wins = [winner_hist[t].get(good) 
+#                             for t in range(max(0, round_num-5), round_num)
+#                             if winner_hist[t] is not None]
+#                 if len(recent_wins) >= 2:
+#                     if len(set(recent_wins)) == 1:
+#                         is_cold = True
+#             # if is_cold and good not in adjacent_goods:
+#             #     is_cold = False
 
-        # for good in self.pref_goods:
-            if self.good_valuations[good] >= min_bids[good]:
-                bids[good] = min_bids[good]
-            else:
-                self.pref_goods.remove(good)
-        return self.clip_bids(bids)
+#         # for good in self.pref_goods:
+#             if self.good_valuations[good] >= min_bids[good]:
+#                 bids[good] = min_bids[good]
+#             elif is_cold:
+#                 # Even if marginal utility low, cold → good purchase
+#                 bids[good] = min_bids[good]
+#             else:
+#                 self.pref_goods.remove(good)
+#         return self.clip_bids(bids)
 
     # def local_bid(self, n, alpha):
     #     total_utility = self.calc_total_utility(self.pref_goods)
@@ -361,6 +381,52 @@ class MyAgent(MyLSVMAgent):
     #             print(self.get_valuation(good))
     #             print("----------------------------------")
     #             self.good_valuations[good] =  max(marginal_utility, self.get_valuation(good))
+        bids = {}
+        min_bids = self.get_min_bids()
+
+
+        total_utility = self.calc_total_utility(self.pref_goods)
+        for good in self.pref_goods:
+            #new_goods = self.pref_goods.copy().remove(good)
+            new_goods = [g for g in self.pref_goods if g != good]
+            marginal_utility = total_utility - self.calc_total_utility(new_goods)
+            self.good_valuations[good] = marginal_utility
+
+
+            # if(marginal_utility > self.get_valuation(good)):
+            #     self.good_valuations[good] = self.good_valuations[good] * self.calc_competition_score(good)
+            
+        print(sorted(self.pref_goods, key=lambda g: self.good_valuations[g], reverse=True))
+        print(sorted(self.good_valuations.values(), reverse=True))
+        print("--------------------------")
+
+
+        for good in sorted(self.pref_goods, key=lambda g: self.good_valuations[g], reverse=True):
+            #if self.good_valuations[good] >= min_bids[good]:
+            if self.calc_total_utility(self.pref_goods) - self.calc_total_utility(None) >= 0:
+                bids[good] = min_bids[good]
+            else:
+                self.pref_goods.remove(good)
+            #self.calc_competition_score(good)
+        return self.clip_bids(bids)
+    
+    def calc_competition_score(self, good):
+        if(len(self.get_winner_history_map()) >= 10): # presumably >= $1
+            winners = []
+            for i in range(1, 11):
+                # print("|||||||||||||||||||||||||||||||||")
+                winners.append(self.get_winner_history_map()[-1*i][good])
+            winners_set = set(winners)
+            if(len(winners_set) == 1):
+                return 1
+            elif(len(winners_set) == 2):
+                prob_highest = (self.get_valuation(good) - 3)/17
+                return prob_highest
+            else:
+                prob_highest = ((self.get_valuation(good) - 3)/17)**2
+                return prob_highest
+        else:
+            return 1
 
 
         
