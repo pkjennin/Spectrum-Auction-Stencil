@@ -62,6 +62,7 @@ class MyAgent(MyLSVMAgent):
                 bids[g] = min_bids[g]
 
         return self.clip_bids(bids)
+    
 
     def regional_bidder_strategy(self): 
         # TODO: Fill out with your regional bidder strategy
@@ -149,78 +150,145 @@ class MyAgent(MyLSVMAgent):
         #     #         self.pref_goods.remove(good)
         # return self.clip_bids(bids)
 
-        # NEW STRATEGY IMPLEMENTATION:
-        min_bids = self.get_min_bids(self.pref_goods)
-        valuations = self.get_valuations(self.pref_goods)
+        # # NEW STRATEGY IMPLEMENTATION:
+        # min_bids = self.get_min_bids(self.pref_goods)
+        # valuations = self.get_valuations(self.pref_goods)
+        # bids = {}
+
+        # sketchy_goods = [g for g in self.pref_goods if valuations[g] < min_bids[g]]
+        # sketchy_vals = self.get_valuations(sketchy_goods)
+        # top_sketchy_goods = sorted(sketchy_vals.keys(), key=lambda g: sketchy_vals[g], reverse=True)
+        # if len(top_sketchy_goods) > 4:
+        #     top_sketchy_goods = top_sketchy_goods[:4]
+
+        # combinations_of_sketchy = []
+        # for r in range(len(top_sketchy_goods) + 1):
+        #     combinations_of_sketchy.extend(list(combinations(top_sketchy_goods, r)))
+
+        # bundle_vals = {}
+        # for bundle in combinations_of_sketchy:
+        #     new_goods = [g for g in self.pref_goods if g not in bundle]
+        #     bundle_vals[bundle] = self.calc_total_utility(new_goods)
+
+        # best_bundle = max(bundle_vals, key=bundle_vals.get) if bundle_vals else []
+        # self.pref_goods = [g for g in self.pref_goods if g not in best_bundle]
+
+        # if len(self.pref_goods) < 4:
+        #     return {}
+
+        # if len(self.pref_goods) >= 6:
+        #     return self.clip_bids({
+        #         g: min(self.get_min_bids()[g], self.get_valuation(g))
+        #         for g in self.pref_goods
+        #         if self.get_valuation(g) >= self.get_min_bids()[g] 
+        #     })
+
+        # goods_to_idx = self.get_goods_to_index()
+        # full_proximity = self.get_goods_in_proximity()
+        # all_min_bids = self.get_min_bids()
+        # all_vals = self.get_valuations()
+
+        # current_utility = self.calc_total_utility(self.pref_goods)
+
+        # def are_adjacent(g1, g2):
+        #     (x1, y1) = goods_to_idx[g1]
+        #     (x2, y2) = goods_to_idx[g2]
+        #     return abs(x1 - x2) + abs(y1 - y2) == 1
+
+        # def is_connected(bundle, g):
+        #     return any(are_adjacent(g, h) for h in bundle)
+
+        # for g in full_proximity:
+        #     if g in self.pref_goods:
+        #         continue
+
+        #     if all_vals[g] < all_min_bids[g]:
+        #         continue
+
+        #     if not is_connected(self.pref_goods, g):
+        #         continue
+
+        #     if len(self.pref_goods) >= 6:
+        #         break
+        #     new_bundle = self.pref_goods + [g]
+        #     new_utility = self.calc_total_utility(new_bundle)
+
+        #     if new_utility > current_utility:
+        #         self.pref_goods.append(g)
+        #         current_utility = new_utility
+        # for g in self.pref_goods:
+        #     if all_vals[g] >= all_min_bids[g]:
+        #         bids[g] = all_min_bids[g]
+
+        # return self.clip_bids(bids)
+
+        # # JUMP BIDDING STRATEGY:
+        if self.get_current_round() == 1:
+            vals = self.get_valuations()
+            min_bids = self.get_min_bids()
+            bids = {}
+
+            for g in self.pref_goods:
+                jump_price = int(vals[g] * random.uniform(0.75, 1.05))
+                jump_price = max(jump_price, min_bids[g])
+
+                bids[g] = jump_price
+            # print("JUMP BIDDING:", bids)
+
+            return self.clip_bids(bids)
+
+        losing_goods = [g for g in self.pref_goods if self.competition[g] >= 2]
+        self.pref_goods = [g for g in self.pref_goods if g not in losing_goods]
+
+        vals = self.get_valuations()
+        min_bids = self.get_min_bids()
         bids = {}
-
-        sketchy_goods = [g for g in self.pref_goods if valuations[g] < min_bids[g]]
-        sketchy_vals = self.get_valuations(sketchy_goods)
-        top_sketchy_goods = sorted(sketchy_vals.keys(), key=lambda g: sketchy_vals[g], reverse=True)
-        if len(top_sketchy_goods) > 4:
-            top_sketchy_goods = top_sketchy_goods[:4]
-
-        combinations_of_sketchy = []
-        for r in range(len(top_sketchy_goods) + 1):
-            combinations_of_sketchy.extend(list(combinations(top_sketchy_goods, r)))
-
-        bundle_vals = {}
-        for bundle in combinations_of_sketchy:
-            new_goods = [g for g in self.pref_goods if g not in bundle]
-            bundle_vals[bundle] = self.calc_total_utility(new_goods)
-
-        best_bundle = max(bundle_vals, key=bundle_vals.get) if bundle_vals else []
-        self.pref_goods = [g for g in self.pref_goods if g not in best_bundle]
 
         if len(self.pref_goods) < 4:
             return {}
-
         if len(self.pref_goods) >= 6:
-            return self.clip_bids({
-                g: min(self.get_min_bids()[g], self.get_valuation(g))
-                for g in self.pref_goods
-                if self.get_valuation(g) >= self.get_min_bids()[g] 
-            })
+            for g in self.pref_goods:
+                if vals[g] >= min_bids[g]:
+                    bids[g] = min_bids[g]
+            return self.clip_bids(bids)
 
         goods_to_idx = self.get_goods_to_index()
-        full_proximity = self.get_goods_in_proximity()
-        all_min_bids = self.get_min_bids()
-        all_vals = self.get_valuations()
+        proximity = self.get_goods_in_proximity()
 
-        current_utility = self.calc_total_utility(self.pref_goods)
-
-        def are_adjacent(g1, g2):
+        def adjacent(g1, g2):
             (x1, y1) = goods_to_idx[g1]
             (x2, y2) = goods_to_idx[g2]
             return abs(x1 - x2) + abs(y1 - y2) == 1
 
-        def is_connected(bundle, g):
-            return any(are_adjacent(g, h) for h in bundle)
+        def touches_cluster(g):
+            return any(adjacent(g, h) for h in self.pref_goods)
 
-        for g in full_proximity:
+        current_util = self.calc_total_utility(self.pref_goods)
+
+        for g in proximity:
             if g in self.pref_goods:
                 continue
-
-            if all_vals[g] < all_min_bids[g]:
+            if vals[g] < min_bids[g]:
                 continue
-
-            if not is_connected(self.pref_goods, g):
+            if not touches_cluster(g):
                 continue
 
             if len(self.pref_goods) >= 6:
                 break
-            new_bundle = self.pref_goods + [g]
-            new_utility = self.calc_total_utility(new_bundle)
 
-            if new_utility > current_utility:
+            new_goods = self.pref_goods + [g]
+            new_util = self.calc_total_utility(new_goods)
+
+            if new_util > current_util:
                 self.pref_goods.append(g)
-                current_utility = new_utility
+                current_util = new_util
+
         for g in self.pref_goods:
-            if all_vals[g] >= all_min_bids[g]:
-                bids[g] = all_min_bids[g]
+            if vals[g] >= min_bids[g]:
+                bids[g] = min_bids[g]
 
         return self.clip_bids(bids)
-
+        
     def get_bids(self):
         if self.is_national_bidder(): 
             return self.national_bidder_strategy()
