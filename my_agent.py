@@ -20,6 +20,7 @@ class MyAgent(MyLSVMAgent):
         #TODO: Fill out with anything you want to initialize each auction
         self.pref_goods = self.get_goods_in_proximity()
         all_goods = self.get_goods()
+        self.good_valuations = self.get_valuations(self.pref_goods)
 
         self.highest_seen_bid = {g: 0 for g in all_goods}
         self.competition = {g: 0 for g in all_goods}
@@ -289,42 +290,67 @@ class MyAgent(MyLSVMAgent):
 
         # return self.clip_bids(bids)
 
+# # OTHER STRATEGY -----------------------------------
+#         vals = self.get_valuations()
+#         min_bids = self.get_min_bids()
+#         goods_to_idx = self.get_goods_to_index()
+#         all_goods = self.get_goods()
 
-        vals = self.get_valuations()
+#         scores = {}
+#         for g in all_goods:
+#             scores[g] = vals[g] - min_bids[g]
+
+#         ranked = sorted(all_goods, key=lambda g: scores[g], reverse=True)
+
+#         candidates = ranked[:10]
+
+#         def adjacent(a, b):
+#             (x1, y1) = goods_to_idx[a]
+#             (x2, y2) = goods_to_idx[b]
+#             return abs(x1 - x2) + abs(y1 - y2) == 1
+
+#         cluster = [candidates[0]]  # best good first
+
+#         def connected_to_cluster(g):
+#             return any(adjacent(g, h) for h in cluster)
+
+#         for g in candidates[1:]:
+#             if connected_to_cluster(g):
+#                 cluster.append(g)
+#             if len(cluster) == 10:
+#                 break
+
+#         final_bundle = []
+#         for g in cluster:
+#             if vals[g] >= min_bids[g]:
+#                 final_bundle.append(g)
+#         bids = {g: min_bids[g] for g in final_bundle}
+#         return self.clip_bids(bids)
+
+
+
+# MARGINAL VALUES STRATEGY
+        bids = {}
         min_bids = self.get_min_bids()
-        goods_to_idx = self.get_goods_to_index()
-        all_goods = self.get_goods()
 
-        scores = {}
-        for g in all_goods:
-            scores[g] = vals[g] - min_bids[g]
+        self.local_bid(n=1, alpha=0.5)
 
-        ranked = sorted(all_goods, key=lambda g: scores[g], reverse=True)
-
-        candidates = ranked[:10]
-
-        def adjacent(a, b):
-            (x1, y1) = goods_to_idx[a]
-            (x2, y2) = goods_to_idx[b]
-            return abs(x1 - x2) + abs(y1 - y2) == 1
-
-        cluster = [candidates[0]]  # best good first
-
-        def connected_to_cluster(g):
-            return any(adjacent(g, h) for h in cluster)
-
-        for g in candidates[1:]:
-            if connected_to_cluster(g):
-                cluster.append(g)
-            if len(cluster) == 10:
-                break
-
-        final_bundle = []
-        for g in cluster:
-            if vals[g] >= min_bids[g]:
-                final_bundle.append(g)
-        bids = {g: min_bids[g] for g in final_bundle}
+        for good in self.pref_goods:
+            if self.good_valuations[good] >= min_bids[good]:
+                bids[good] = min_bids[good]
+            else:
+                self.pref_goods.remove(good)
         return self.clip_bids(bids)
+
+    def local_bid(self, n, alpha):
+        total_utility = self.calc_total_utility(self.pref_goods)
+
+        for good in self.pref_goods:
+            for i in range(n):
+                new_goods = self.pref_goods.copy().remove(good)
+                marginal_utility = total_utility - self.calc_total_utility(new_goods)
+                self.good_valuations[good] =  max(marginal_utility, self.get_valuation(good))
+
 
         
     def get_bids(self):
