@@ -333,23 +333,33 @@ class MyAgent(MyLSVMAgent):
         bids = {}
         min_bids = self.get_min_bids()
 
-        self.local_bid(n=1, alpha=0.5)
-
+        total_utility = self.calc_total_utility(self.pref_goods)
         for good in self.pref_goods:
+            new_goods = self.pref_goods.copy().remove(good)
+            marginal_utility = total_utility - self.calc_total_utility(new_goods)
+            # print(marginal_utility)
+            # print(self.get_valuation(good))
+            # print("----------------------------------")
+            self.good_valuations[good] = max(marginal_utility, self.get_valuation(good))
+
+        # for good in self.pref_goods:
             if self.good_valuations[good] >= min_bids[good]:
                 bids[good] = min_bids[good]
             else:
                 self.pref_goods.remove(good)
         return self.clip_bids(bids)
 
-    def local_bid(self, n, alpha):
-        total_utility = self.calc_total_utility(self.pref_goods)
+    # def local_bid(self, n, alpha):
+    #     total_utility = self.calc_total_utility(self.pref_goods)
 
-        for good in self.pref_goods:
-            for i in range(n):
-                new_goods = self.pref_goods.copy().remove(good)
-                marginal_utility = total_utility - self.calc_total_utility(new_goods)
-                self.good_valuations[good] =  max(marginal_utility, self.get_valuation(good))
+    #     for good in self.pref_goods:
+    #         for i in range(n):
+    #             new_goods = self.pref_goods.copy().remove(good)
+    #             marginal_utility = total_utility - self.calc_total_utility(new_goods)
+    #             print(marginal_utility)
+    #             print(self.get_valuation(good))
+    #             print("----------------------------------")
+    #             self.good_valuations[good] =  max(marginal_utility, self.get_valuation(good))
 
 
         
