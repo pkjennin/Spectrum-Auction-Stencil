@@ -335,7 +335,8 @@ class MyAgent(MyLSVMAgent):
 
         total_utility = self.calc_total_utility(self.pref_goods)
         for good in self.pref_goods:
-            new_goods = self.pref_goods.copy().remove(good)
+            # new_goods = self.pref_goods.copy().remove(good)
+            new_goods = [g for g in self.pref_goods if g != good]
             marginal_utility = total_utility - self.calc_total_utility(new_goods)
             # print(marginal_utility)
             # print(self.get_valuation(good))
