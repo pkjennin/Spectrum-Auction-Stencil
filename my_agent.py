@@ -15,7 +15,7 @@ from itertools import combinations
 
 NAME = "256-82-5206" # TODO: Please give your agent a NAME
 
-class MyAgent(MyLSVMAgent):
+class MyAgent2(MyLSVMAgent):
     def setup(self):
         #TODO: Fill out with anything you want to initialize each auction
         self.pref_goods = self.get_goods_in_proximity()
@@ -30,39 +30,57 @@ class MyAgent(MyLSVMAgent):
         vals = self.get_valuations()
         min_bids = self.get_min_bids()
         bids = {}
-        bundle = [g for g in vals if vals[g] >= min_bids[g]]
-        improved = True
-        while improved:
-            improved = False
-            current_util = self.calc_total_utility(bundle)
+        # bundle = [g for g in vals if vals[g] >= min_bids[g]]
+        # improved = True
+        # while improved:
+        #     improved = False
+        #     current_util = self.calc_total_utility(bundle)
 
-            for g in list(bundle):
-                new_bundle = [x for x in bundle if x != g]
-                new_util = self.calc_total_utility(new_bundle)
+        #     for g in list(bundle):
+        #         new_bundle = [x for x in bundle if x != g]
+        #         new_util = self.calc_total_utility(new_bundle)
 
-                if new_util > current_util:
-                    bundle.remove(g)
-                    improved = True
-                    current_util = new_util
-        all_goods = self.get_goods()
-        current_util = self.calc_total_utility(bundle)
+        #         if new_util > current_util:
+        #             bundle.remove(g)
+        #             improved = True
+        #             current_util = new_util
+        # all_goods = self.get_goods()
+        # current_util = self.calc_total_utility(bundle)
 
-        for g in all_goods:
-            if g not in bundle:
-                if min_bids[g] > vals[g]:
-                    continue
+        # for g in all_goods:
+        #     if g not in bundle:
+        #         if min_bids[g] > vals[g]:
+        #             continue
 
-                new_bundle = bundle + [g]
-                new_util = self.calc_total_utility(new_bundle)
+        #         new_bundle = bundle + [g]
+        #         new_util = self.calc_total_utility(new_bundle)
 
-                if new_util > current_util:
-                    bundle.append(g)
-                    current_util = new_util
-        for g in bundle:
+        #         if new_util > current_util:
+        #             bundle.append(g)
+        #             current_util = new_util
+        for g in self.get_goods():
             if min_bids[g] <= vals[g]:
                 bids[g] = min_bids[g]
 
         return self.clip_bids(bids)
+    
+
+        # bids = {}
+        # min_bids = self.get_min_bids()
+
+        # total_utility = self.calc_total_utility(self.pref_goods)
+        # for good in self.pref_goods:
+        #     new_goods = self.pref_goods.copy()
+        #     new_goods.remove(good) #[g for g in self.pref_goods if g != good]
+        #     marginal_utility = total_utility - self.calc_total_utility(new_goods)
+        #     self.good_valuations[good] = max(marginal_utility, self.get_valuation(good))
+
+        #     if self.good_valuations[good] >= (min_bids[good]):
+        #         bids[good] = min_bids[good]
+        #     else:
+        #         self.pref_goods.remove(good)
+        # self.pref_goods = sorted(self.pref_goods, key=lambda g: self.good_valuations[g], reverse=True)
+        # return self.clip_bids(bids)
     
 
     def regional_bidder_strategy(self): 
@@ -384,30 +402,460 @@ class MyAgent(MyLSVMAgent):
         bids = {}
         min_bids = self.get_min_bids()
 
-
         total_utility = self.calc_total_utility(self.pref_goods)
         for good in self.pref_goods:
-            #new_goods = self.pref_goods.copy().remove(good)
-            new_goods = [g for g in self.pref_goods if g != good]
+            new_goods = self.pref_goods.copy()
+            new_goods.remove(good) #[g for g in self.pref_goods if g != good]
             marginal_utility = total_utility - self.calc_total_utility(new_goods)
-            self.good_valuations[good] = marginal_utility
+            self.good_valuations[good] = max(marginal_utility, self.get_valuation(good))
 
-
-            # if(marginal_utility > self.get_valuation(good)):
-            #     self.good_valuations[good] = self.good_valuations[good] * self.calc_competition_score(good)
-            
-        print(sorted(self.pref_goods, key=lambda g: self.good_valuations[g], reverse=True))
-        print(sorted(self.good_valuations.values(), reverse=True))
-        print("--------------------------")
-
-
-        for good in sorted(self.pref_goods, key=lambda g: self.good_valuations[g], reverse=True):
-            #if self.good_valuations[good] >= min_bids[good]:
-            if self.calc_total_utility(self.pref_goods) - self.calc_total_utility(None) >= 0:
+            if self.good_valuations[good] >= (min_bids[good]):
                 bids[good] = min_bids[good]
             else:
                 self.pref_goods.remove(good)
-            #self.calc_competition_score(good)
+        self.pref_goods = sorted(self.pref_goods, key=lambda g: self.good_valuations[g], reverse=True)
+        return self.clip_bids(bids)
+
+
+        # bids = {}
+        # min_bids = self.get_min_bids()
+
+        # total_utility = self.calc_total_utility(self.pref_goods)
+        # for good in self.pref_goods:
+        #     new_goods = self.pref_goods.copy()
+        #     new_goods.remove(good) #[g for g in self.pref_goods if g != good]
+        #     marginal_utility = total_utility - self.calc_total_utility(new_goods)
+        #     self.good_valuations[good] = max(marginal_utility, self.get_valuation(good))
+
+        #     if self.good_valuations[good] >= min_bids[good]:
+        #         bids[good] = min_bids[good]
+        #     else:
+        #         self.pref_goods.remove(good)
+        # self.pref_goods = sorted(self.pref_goods, key=lambda g: self.good_valuations[g], reverse=True)
+        # return self.clip_bids(bids)
+    
+    def calc_competition_score(self, good):
+        if(len(self.get_winner_history_map()) >= 10): # presumably >= $1
+            winners = []
+            for i in range(1, 11):
+                # print("|||||||||||||||||||||||||||||||||")
+                winners.append(self.get_winner_history_map()[-1*i][good])
+            winners_set = set(winners)
+            if(len(winners_set) == 1):
+                return 1
+            elif(len(winners_set) == 2):
+                prob_highest = (self.get_valuation(good) - 3)/17
+                return prob_highest
+            else:
+                prob_highest = ((self.get_valuation(good) - 3)/17)**2
+                return prob_highest
+        else:
+            return 1
+
+
+        
+    def get_bids(self):
+        if self.is_national_bidder(): 
+            return self.national_bidder_strategy()
+        else: 
+            return self.regional_bidder_strategy()
+    
+    def update(self):
+        #TODO: Fill out with anything you want to update each round
+        min_bids = self.get_min_bids()
+
+        for g, price in min_bids.items():
+            if g not in self.highest_seen_bid:
+                self.highest_seen_bid[g] = price
+            else:
+                if price > self.highest_seen_bid[g]:
+                    self.highest_seen_bid[g] = price
+                    self.competition[g] += 1
+        # pass 
+
+    def teardown(self):
+        #TODO: Fill out with anything you want to run at the end of each auction
+
+        print(self.get_goods_in_proximity())
+        print(self.pref_goods)
+        # if(self.is_national_bidder()):
+        #     print(self.calc_total_utility())
+        print("----------------------------------------------")
+
+
+class MyAgent(MyLSVMAgent):
+    def setup(self):
+        #TODO: Fill out with anything you want to initialize each auction
+        self.pref_goods = self.get_goods_in_proximity()
+        all_goods = self.get_goods()
+        self.good_valuations = self.get_valuations(self.pref_goods)
+
+        self.highest_seen_bid = {g: 0 for g in all_goods}
+        self.competition = {g: 0 for g in all_goods}
+    
+    def national_bidder_strategy(self): 
+        # TODO: Fill out with your national bidder strategy
+        vals = self.get_valuations()
+        min_bids = self.get_min_bids()
+        bids = {}
+        
+        for g in self.get_goods():
+            if min_bids[g] <= vals[g]:
+                bids[g] = min_bids[g]
+
+        return self.clip_bids(bids)
+    
+
+
+        # bids = {}
+        # min_bids = self.get_min_bids()
+
+        # total_utility = self.calc_total_utility(self.pref_goods)
+        # for good in self.pref_goods:
+        #     new_goods = self.pref_goods.copy()
+        #     new_goods.remove(good) #[g for g in self.pref_goods if g != good]
+        #     marginal_utility = total_utility - self.calc_total_utility(new_goods)
+        #     self.good_valuations[good] = max(marginal_utility, self.get_valuation(good))
+
+        #     if self.good_valuations[good] >= (min_bids[good]*2):
+        #         bids[good] = min_bids[good]
+        #     else:
+        #         self.pref_goods.remove(good)
+        # self.pref_goods = sorted(self.pref_goods, key=lambda g: self.good_valuations[g], reverse=True)
+        # return self.clip_bids(bids)
+    
+
+    def regional_bidder_strategy(self): 
+        # TODO: Fill out with your regional bidder strategy
+        # Strategy: bid on preferred good and then on the next 6 highest utility adjacent goods
+        # # OUR OLD STRATEGY BELOW:
+        # min_bids = self.get_min_bids(self.pref_goods)
+
+        # valuations = self.get_valuations(self.pref_goods)
+        # bids = {}
+        # sketchy_goods = []
+        # for good in self.pref_goods:
+        #     if(self.get_valuation(good) < min_bids[good]): # always bid when val >= min bid
+        #         sketchy_goods.append(good)
+
+        # sketchy_vals = self.get_valuations(sketchy_goods)
+        # top_sketchy_goods = sorted(sketchy_vals.keys(), key=lambda g: sketchy_vals[g], reverse=True)
+        # if(len(top_sketchy_goods) > 4):
+        #     self.pref_goods = [e for e in self.pref_goods if e not in top_sketchy_goods[4:]]
+        #     top_sketchy_goods = top_sketchy_goods[:4] # take only top 4
+        # combinations_of_sketchy = []
+        # for r in range(len(top_sketchy_goods)):
+        #     combinations_of_sketchy.extend(list(combinations(top_sketchy_goods, r)))
+
+        # bundle_vals = {}
+        # for bundle in combinations_of_sketchy:
+        #     new_goods = [e for e in self.pref_goods if e not in bundle]
+        #     bundle_vals[bundle] = self.calc_total_utility(new_goods)
+        # if(bundle_vals):
+        #     best_bundle = max(bundle_vals, key=bundle_vals.get)
+        #     #print(best_bundle)
+        # else:
+        #     best_bundle = []
+        
+        # self.pref_goods = [e for e in self.pref_goods if e not in best_bundle]
+
+        # # NEW PART: try adding goods in proximity that increase utility
+        # goods_to_idx = self.get_goods_to_index()
+        # full_proximity = self.get_goods_in_proximity()
+        # all_min_bids = self.get_min_bids()
+
+        # current_utility = self.calc_total_utility(self.pref_goods)
+        # def are_adjacent(g1, g2):
+        #     (x1, y1) = goods_to_idx[g1]
+        #     (x2, y2) = goods_to_idx[g2]
+        #     return abs(x1 - x2) + abs(y1 - y2) == 1
+        # def is_connected_to_some_cluster(bundle, g):
+        #     for h in bundle:
+        #         if are_adjacent(g, h):
+        #             return True
+        #     return False
+        # for g in full_proximity:
+        #     if g not in self.pref_goods:
+        #         if not is_connected_to_some_cluster(self.pref_goods, g):
+        #             continue
+
+        #         new_bundle = self.pref_goods + [g]
+        #         new_utility = self.calc_total_utility(new_bundle)
+
+        #         if new_utility > current_utility:
+        #             self.pref_goods.append(g)
+        #             current_utility = new_utility
+
+        # for good in self.pref_goods:
+        #     bids[good] = all_min_bids[good]
+
+
+        # # for good in self.pref_goods:
+        # #     bids[good] = min_bids[good]
+
+        # # print(self.get_goods_in_proximity())
+        # # print(self.pref_goods)
+        # # print("----------------------------------------------")
+        # #pref_good = self.get_regional_good()
+        # #self.proximity()
+        # #self.get_goods_to_index()
+
+
+
+        #     # else:     
+        #     #     print("AAAAAAAAAAAAAAAA")                                      # => someone else wants good
+        #     #     new_goods = self.pref_goods.copy().remove(good)
+        #     #     if(self.calc_total_utility(self.pref_goods) >= self.calc_total_utility(new_goods)):
+        #     #         bids[good] = min_bids[good]
+        #     #     else:
+        #     #         self.pref_goods.remove(good)
+        # return self.clip_bids(bids)
+
+        # # NEW STRATEGY IMPLEMENTATION:
+        # min_bids = self.get_min_bids(self.pref_goods)
+        # valuations = self.get_valuations(self.pref_goods)
+        # bids = {}
+
+        # sketchy_goods = [g for g in self.pref_goods if valuations[g] < min_bids[g]]
+        # sketchy_vals = self.get_valuations(sketchy_goods)
+        # top_sketchy_goods = sorted(sketchy_vals.keys(), key=lambda g: sketchy_vals[g], reverse=True)
+        # if len(top_sketchy_goods) > 4:
+        #     top_sketchy_goods = top_sketchy_goods[:4]
+
+        # combinations_of_sketchy = []
+        # for r in range(len(top_sketchy_goods) + 1):
+        #     combinations_of_sketchy.extend(list(combinations(top_sketchy_goods, r)))
+
+        # bundle_vals = {}
+        # for bundle in combinations_of_sketchy:
+        #     new_goods = [g for g in self.pref_goods if g not in bundle]
+        #     bundle_vals[bundle] = self.calc_total_utility(new_goods)
+
+        # best_bundle = max(bundle_vals, key=bundle_vals.get) if bundle_vals else []
+        # self.pref_goods = [g for g in self.pref_goods if g not in best_bundle]
+
+        # if len(self.pref_goods) < 4:
+        #     return {}
+
+        # if len(self.pref_goods) >= 6:
+        #     return self.clip_bids({
+        #         g: min(self.get_min_bids()[g], self.get_valuation(g))
+        #         for g in self.pref_goods
+        #         if self.get_valuation(g) >= self.get_min_bids()[g] 
+        #     })
+
+        # goods_to_idx = self.get_goods_to_index()
+        # full_proximity = self.get_goods_in_proximity()
+        # all_min_bids = self.get_min_bids()
+        # all_vals = self.get_valuations()
+
+        # current_utility = self.calc_total_utility(self.pref_goods)
+
+        # def are_adjacent(g1, g2):
+        #     (x1, y1) = goods_to_idx[g1]
+        #     (x2, y2) = goods_to_idx[g2]
+        #     return abs(x1 - x2) + abs(y1 - y2) == 1
+
+        # def is_connected(bundle, g):
+        #     return any(are_adjacent(g, h) for h in bundle)
+
+        # for g in full_proximity:
+        #     if g in self.pref_goods:
+        #         continue
+
+        #     if all_vals[g] < all_min_bids[g]:
+        #         continue
+
+        #     if not is_connected(self.pref_goods, g):
+        #         continue
+
+        #     if len(self.pref_goods) >= 6:
+        #         break
+        #     new_bundle = self.pref_goods + [g]
+        #     new_utility = self.calc_total_utility(new_bundle)
+
+        #     if new_utility > current_utility:
+        #         self.pref_goods.append(g)
+        #         current_utility = new_utility
+        # for g in self.pref_goods:
+        #     if all_vals[g] >= all_min_bids[g]:
+        #         bids[g] = all_min_bids[g]
+
+        # return self.clip_bids(bids)
+
+        # # JUMP BIDDING STRATEGY:
+        # if self.get_current_round() == 1:
+        #     vals = self.get_valuations()
+        #     min_bids = self.get_min_bids()
+        #     bids = {}
+
+        #     for g in self.pref_goods:
+        #         jump_price = int(vals[g] * random.uniform(0.75, 1.05))
+        #         jump_price = max(jump_price, min_bids[g])
+
+        #         bids[g] = jump_price
+        #     # print("JUMP BIDDING:", bids)
+
+        #     return self.clip_bids(bids)
+
+        # losing_goods = [g for g in self.pref_goods if self.competition[g] >= 2]
+        # self.pref_goods = [g for g in self.pref_goods if g not in losing_goods]
+
+        # vals = self.get_valuations()
+        # min_bids = self.get_min_bids()
+        # bids = {}
+
+        # if len(self.pref_goods) < 4:
+        #     return {}
+        # if len(self.pref_goods) >= 6:
+        #     for g in self.pref_goods:
+        #         if vals[g] >= min_bids[g]:
+        #             bids[g] = min_bids[g]
+        #     return self.clip_bids(bids)
+
+        # goods_to_idx = self.get_goods_to_index()
+        # proximity = self.get_goods_in_proximity()
+
+        # def adjacent(g1, g2):
+        #     (x1, y1) = goods_to_idx[g1]
+        #     (x2, y2) = goods_to_idx[g2]
+        #     return abs(x1 - x2) + abs(y1 - y2) == 1
+
+        # def touches_cluster(g):
+        #     return any(adjacent(g, h) for h in self.pref_goods)
+
+        # current_util = self.calc_total_utility(self.pref_goods)
+
+        # for g in proximity:
+        #     if g in self.pref_goods:
+        #         continue
+        #     if vals[g] < min_bids[g]:
+        #         continue
+        #     if not touches_cluster(g):
+        #         continue
+
+        #     if len(self.pref_goods) >= 6:
+        #         break
+
+        #     new_goods = self.pref_goods + [g]
+        #     new_util = self.calc_total_utility(new_goods)
+
+        #     if new_util > current_util:
+        #         self.pref_goods.append(g)
+        #         current_util = new_util
+
+        # for g in self.pref_goods:
+        #     if vals[g] >= min_bids[g]:
+        #         bids[g] = min_bids[g]
+
+        # return self.clip_bids(bids)
+
+# # OTHER STRATEGY -----------------------------------
+#         vals = self.get_valuations()
+#         min_bids = self.get_min_bids()
+#         goods_to_idx = self.get_goods_to_index()
+#         all_goods = self.get_goods()
+
+#         scores = {}
+#         for g in all_goods:
+#             scores[g] = vals[g] - min_bids[g]
+
+#         ranked = sorted(all_goods, key=lambda g: scores[g], reverse=True)
+
+#         candidates = ranked[:10]
+
+#         def adjacent(a, b):
+#             (x1, y1) = goods_to_idx[a]
+#             (x2, y2) = goods_to_idx[b]
+#             return abs(x1 - x2) + abs(y1 - y2) == 1
+
+#         cluster = [candidates[0]]  # best good first
+
+#         def connected_to_cluster(g):
+#             return any(adjacent(g, h) for h in cluster)
+
+#         for g in candidates[1:]:
+#             if connected_to_cluster(g):
+#                 cluster.append(g)
+#             if len(cluster) == 10:
+#                 break
+
+#         final_bundle = []
+#         for g in cluster:
+#             if vals[g] >= min_bids[g]:
+#                 final_bundle.append(g)
+#         bids = {g: min_bids[g] for g in final_bundle}
+#         return self.clip_bids(bids)
+
+
+
+# # MARGINAL VALUES STRATEGY
+#         bids = {}
+#         min_bids = self.get_min_bids()
+
+#         total_utility = self.calc_total_utility(self.pref_goods)
+#         round_num = self.get_current_round()
+#         adjacent_goods = set(self.get_goods_in_proximity())
+#         # print("Adjacent Goods:", adjacent_goods)
+#         for good in self.pref_goods:
+#             # new_goods = self.pref_goods.copy().remove(good)
+#             new_goods = [g for g in self.pref_goods if g != good]
+#             marginal_utility = total_utility - self.calc_total_utility(new_goods)
+#             # print(marginal_utility)
+#             # print(self.get_valuation(good))
+#             # print("----------------------------------")
+#             self.good_valuations[good] = max(marginal_utility, self.get_valuation(good))
+            
+#             # --- cold rule ---
+#             is_cold = False
+#             # A
+#             winner_hist = self.get_winner_history_map() or []
+#             if round_num > 5:
+#                 recent_wins = [winner_hist[t].get(good) 
+#                             for t in range(max(0, round_num-5), round_num)
+#                             if winner_hist[t] is not None]
+#                 if len(recent_wins) >= 2:
+#                     if len(set(recent_wins)) == 1:
+#                         is_cold = True
+#             # if is_cold and good not in adjacent_goods:
+#             #     is_cold = False
+
+#         # for good in self.pref_goods:
+#             if self.good_valuations[good] >= min_bids[good]:
+#                 bids[good] = min_bids[good]
+#             elif is_cold:
+#                 # Even if marginal utility low, cold → good purchase
+#                 bids[good] = min_bids[good]
+#             else:
+#                 self.pref_goods.remove(good)
+#         return self.clip_bids(bids)
+
+    # def local_bid(self, n, alpha):
+    #     total_utility = self.calc_total_utility(self.pref_goods)
+
+    #     for good in self.pref_goods:
+    #         for i in range(n):
+    #             new_goods = self.pref_goods.copy().remove(good)
+    #             marginal_utility = total_utility - self.calc_total_utility(new_goods)
+    #             print(marginal_utility)
+    #             print(self.get_valuation(good))
+    #             print("----------------------------------")
+    #             self.good_valuations[good] =  max(marginal_utility, self.get_valuation(good))
+        bids = {}
+        min_bids = self.get_min_bids()
+
+        total_utility = self.calc_total_utility(self.pref_goods)
+        for good in self.pref_goods:
+            new_goods = self.pref_goods.copy()
+            new_goods.remove(good) #[g for g in self.pref_goods if g != good]
+            marginal_utility = total_utility - self.calc_total_utility(new_goods)
+            self.good_valuations[good] = max(marginal_utility, self.get_valuation(good))
+
+            if self.good_valuations[good] >= (min_bids[good]):
+                bids[good] = min_bids[good]
+            else:
+                self.pref_goods.remove(good)
+        self.pref_goods = sorted(self.pref_goods, key=lambda g: self.good_valuations[g], reverse=True)
         return self.clip_bids(bids)
     
     def calc_competition_score(self, good):
@@ -453,8 +901,9 @@ class MyAgent(MyLSVMAgent):
         #TODO: Fill out with anything you want to run at the end of each auction
         print(self.get_goods_in_proximity())
         print(self.pref_goods)
+        if(self.is_national_bidder()):
+            print(self.calc_total_utility())
         print("----------------------------------------------")
-
 ################### SUBMISSION #####################
 my_agent_submission = MyAgent(NAME)
 ####################################################
@@ -528,9 +977,12 @@ if __name__ == "__main__":
         local_save_path="saved_games",
         players=[
             agent,
-            MyAgent("CP - MyAgent"),
-            MyAgent("CP2 - MyAgent"),
-            MyAgent("CP3 - MyAgent"),
+            MyAgent2("CP - MyAgent"),
+            # MyAgent2("CP2 - MyAgent"),
+            # MyAgent2("CP3 - MyAgent"),
+            MinBidAgent("Min Bidder 2"), 
+            JumpBidder("Jump Bidder 2"), 
+            # TruthfulBidder("Truthful Bidder 2"), 
             MinBidAgent("Min Bidder"), 
             JumpBidder("Jump Bidder"), 
             TruthfulBidder("Truthful Bidder"), 
