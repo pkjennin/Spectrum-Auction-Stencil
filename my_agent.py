@@ -83,11 +83,7 @@ class MyAgent(MyLSVMAgent):
 
     def teardown(self):
         #TODO: Fill out with anything you want to run at the end of each auction
-        print(self.get_goods_in_proximity())
-        print(self.pref_goods)
-        if(self.is_national_bidder()):
-            print(self.calc_total_utility())
-        print("----------------------------------------------")
+        pass
 ################### SUBMISSION #####################
 my_agent_submission = MyAgent(NAME)
 ####################################################
